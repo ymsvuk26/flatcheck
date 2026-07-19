@@ -23,4 +23,4 @@ An AI copilot for assessing London rental listings, built end-to-end as a solo A
 
 The application code was AI-generated under my direction; every product decision — scope, prompt rules, evaluation design, source selection, failure mitigations, and what not to build — was mine. The evaluation's known limitations (single-session protocol, judge-family bias and its mitigations, spot-check sample size) are documented inside, not hidden.
 
-*Author details available on request — this portfolio accompanies job applications.*
+
