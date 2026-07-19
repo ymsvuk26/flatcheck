@@ -3,7 +3,8 @@
 
 **One-line summary:** I designed, built, and evaluated an LLM-powered web app that helps overseas renters assess London flat listings for fit, legality, scams, safety, and commute — and shipped mitigations for six real AI product failures encountered along the way: model deprecation (the Gemini 2.5 Flash retirement), output truncation, JSON reliability, geographic vendor blocking, free-tier congestion, and hallucinated live data.
 
-**Live demo:** [link] · **Built with:** AI-assisted development (Claude), Gemini/Claude/Llama APIs, gov.uk source documents, UK Police open data, TfL Journey Planner API
+**Live demo:** https://ymsvuk26.github.io/flatcheck/09_FlatCheck_Lite_app.html 
+**Built with:** AI-assisted development (Claude), Gemini/Claude/Llama APIs, gov.uk source documents, UK Police open data, TfL Journey Planner API
 
 ---
 
@@ -19,7 +20,8 @@ I am the target user: a Hong Kong solicitor relocating to London in 2026. I buil
 |---|---|---|
 | **v0.1** | Prompt-only prototype tested in chat (no app) | The prompt is the product. Iterating rules like "penalise missing information rather than assuming the best" changed output quality more than any later engineering. |
 | **v1** | Google AI Studio build (Gemini) | Fast to ship, revealed the core evaluation findings below — and its own limits (daily quota, platform bugs). |
-| **v2** | Standalone multi-provider web app (current) | Five tabs: listing evaluation, legal compliance audit, risk profile, transit assessment, side-by-side comparison. Swappable model backend (Gemini / Claude / Llama via OpenRouter / Groq). |
+| **v2** | Standalone multi-provider web app (full prototype) | Five tabs: listing evaluation, legal compliance audit, risk profile, transit assessment, side-by-side comparison. Swappable model backend (Gemini / Claude / Llama via OpenRouter / Groq). |
+| **Lite** | Single-page claude.ai artifact (current shipped version) | Deliberate descope after six external-dependency failures: one click, one AI call, no keys, no external services — 70% of features cut to make the core 100% reliable. v2 retained as the documented ambitious prototype. |
 
 **v2 design highlights:**
 
