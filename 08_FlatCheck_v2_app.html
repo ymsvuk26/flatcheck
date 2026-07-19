@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>FlatCheck — London Rental Copilot</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+:root{
+  --bg:#f6f7fb; --card:#ffffff; --ink:#16181d; --muted:#6b7280; --line:#e5e7eb;
+  --accent:#4f46e5; --accent-soft:#eef2ff; --good:#059669; --warn:#d97706; --bad:#dc2626;
+  --radius:16px; --shadow:0 1px 3px rgba(16,18,26,.06),0 8px 24px rgba(16,18,26,.05);
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#0f1117; --card:#181b23; --ink:#e8eaf0; --muted:#9aa1ae; --line:#262a35;
+    --accent:#818cf8; --accent-soft:#23263a; --shadow:0 1px 3px rgba(0,0,0,.4); }
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;padding-bottom:90px}
+header{position:sticky;top:0;z-index:500;background:color-mix(in srgb,var(--bg) 85%,transparent);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.hwrap{max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;gap:14px}
+.logo{font-size:20px;font-weight:800;letter-spacing:-.02em}
+.logo span{color:var(--accent)}
+nav.tabs{display:flex;gap:4px;margin-left:auto}
+.tab-btn{border:none;background:none;color:var(--muted);font-size:14px;font-weight:600;padding:9px 14px;border-radius:10px;cursor:pointer;display:flex;flex-direction:row;gap:7px;align-items:center;transition:all .15s}
+.tab-btn:hover{color:var(--ink)}
+.tab-btn.active{background:var(--accent-soft);color:var(--accent)}
+.tab-btn .ico{font-size:16px}
+#settingsBtn{border:1px solid var(--line);background:var(--card);border-radius:10px;padding:8px 12px;cursor:pointer;color:var(--ink);font-size:15px}
+main{max-width:1100px;margin:0 auto;padding:24px 20px}
+.panel{display:none;animation:fade .2s ease}
+.panel.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:22px;margin-bottom:18px}
+h2{font-size:17px;font-weight:700;margin-bottom:4px}
+.sub{color:var(--muted);font-size:13px;margin-bottom:14px;line-height:1.5}
+label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin:12px 0 5px;text-transform:uppercase;letter-spacing:.04em}
+input,textarea,select{width:100%;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:10px;padding:11px 13px;font-size:14px;font-family:inherit}
+textarea{min-height:150px;resize:vertical;line-height:1.5}
+input:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:-1px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+button.primary{background:var(--accent);color:#fff;border:none;border-radius:12px;padding:13px 22px;font-size:15px;font-weight:700;cursor:pointer;margin-top:16px;transition:transform .1s}
+button.primary:hover{transform:translateY(-1px)}
+button.primary:disabled{opacity:.5;cursor:wait;transform:none}
+button.ghost{background:none;border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:9px 14px;font-size:13px;font-weight:600;cursor:pointer;margin-top:10px}
+.score-ring{display:flex;align-items:center;gap:18px}
+.big-score{font-size:52px;font-weight:800;letter-spacing:-.03em}
+.big-score small{font-size:20px;color:var(--muted);font-weight:600}
+.pill{display:inline-block;padding:4px 11px;border-radius:99px;font-size:12px;font-weight:700}
+.pill.high{background:#fee2e2;color:#b91c1c}.pill.medium{background:#fef3c7;color:#b45309}.pill.low{background:#dcfce7;color:#15803d}
+.pill.SUPPORTED{background:#dcfce7;color:#15803d}.pill.CONTRADICTED{background:#fee2e2;color:#b91c1c}
+.pill.PARTIALLY{background:#fef3c7;color:#b45309}.pill.NOTFOUND{background:var(--accent-soft);color:var(--accent)}
+@media (prefers-color-scheme: dark){
+  .pill.high{background:#3f1d1d;color:#fca5a5}.pill.medium{background:#3b2f14;color:#fcd34d}.pill.low{background:#14321f;color:#86efac}
+  .pill.SUPPORTED{background:#14321f;color:#86efac}.pill.CONTRADICTED{background:#3f1d1d;color:#fca5a5}
+  .pill.PARTIALLY{background:#3b2f14;color:#fcd34d}
+}
+.flag-item{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--line);align-items:flex-start}
+.flag-item:last-child{border:none}
+.flag-item .txt{font-size:14px;line-height:1.5;flex:1}
+.flag-item .quote{color:var(--muted);font-size:12.5px;font-style:italic;margin-top:3px}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th{text-align:left;color:var(--muted);font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;padding:8px 10px;border-bottom:2px solid var(--line)}
+td{padding:11px 10px;border-bottom:1px solid var(--line);vertical-align:top;line-height:1.5}
+.spin{display:none;margin:14px 0;color:var(--muted);font-size:14px}
+.spin.on{display:flex;align-items:center;gap:10px}
+.loader{width:16px;height:16px;border:2.5px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:rot .7s linear infinite}
+@keyframes rot{to{transform:rotate(360deg)}}
+.err{background:#fee2e2;color:#b91c1c;border-radius:10px;padding:12px 14px;font-size:13.5px;margin-top:12px;display:none}
+@media (prefers-color-scheme: dark){.err{background:#3f1d1d;color:#fca5a5}}
+#map{height:340px;border-radius:12px;margin-top:14px;z-index:1}
+.legs{margin-top:14px}
+.leg{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);font-size:14px}
+.leg:last-child{border:none}
+.leg .line-chip{min-width:12px;height:12px;border-radius:50%;flex-shrink:0}
+.transit-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-top:14px}
+.tmode{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:14px;text-align:center}
+.tmode .em{font-size:22px}
+.tmode .t{font-size:20px;font-weight:800;margin:4px 0 2px}
+.tmode .l{font-size:12px;color:var(--muted)}
+.crime-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:12px}
+.crime{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:13px}
+.crime b{display:block;font-size:18px}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:900;align-items:center;justify-content:center;padding:20px}
+.modal-bg.on{display:flex}
+.modal{background:var(--card);border-radius:var(--radius);max-width:520px;width:100%;padding:24px;max-height:85vh;overflow:auto}
+.note{font-size:12.5px;color:var(--muted);line-height:1.55;margin-top:10px}
+.note a{color:var(--accent)}
+.srcbadge{font-size:11.5px;color:var(--muted);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 10px;display:inline-block;margin-top:10px;line-height:1.5}
+.empty{color:var(--muted);font-size:14px;text-align:center;padding:30px 0}
+.intel-links a{display:inline-block;margin:4px 6px 0 0;font-size:13px;color:var(--accent);text-decoration:none;border:1px solid var(--line);padding:6px 11px;border-radius:99px}
+/* Mobile: bottom tab bar */
+@media (max-width:767px){
+  nav.tabs{position:fixed;bottom:0;left:0;right:0;margin:0;background:var(--card);border-top:1px solid var(--line);justify-content:space-around;padding:6px 4px calc(6px + env(safe-area-inset-bottom));z-index:800}
+  .tab-btn{flex-direction:column;gap:2px;font-size:10.5px;padding:6px 8px;border-radius:8px}
+  .tab-btn .ico{font-size:20px}
+  .row,.row3{grid-template-columns:1fr}
+  .big-score{font-size:42px}
+}
+</style>
+</head>
+<body>
+
+<header><div class="hwrap">
+  <div class="logo">Flat<span>Check</span></div>
+  <nav class="tabs" id="tabs">
+    <button class="tab-btn active" data-tab="evaluate"><span class="ico">🔍</span>Evaluate</button>
+    <button class="tab-btn" data-tab="legal"><span class="ico">⚖️</span>Legal audit</button>
+    <button class="tab-btn" data-tab="risk"><span class="ico">🛡️</span>Risks</button>
+    <button class="tab-btn" data-tab="transit"><span class="ico">🚇</span>Transit</button>
+    <button class="tab-btn" data-tab="compare"><span class="ico">📊</span>Compare</button>
+  </nav>
+  <button id="settingsBtn" title="Settings">⚙️</button>
+</div></header>
+
+<main>
+
+<!-- ============ EVALUATE ============ -->
+<section class="panel active" id="panel-evaluate">
+  <div class="card">
+    <h2>Evaluate a listing</h2>
+    <div class="sub">Paste the full text of a rental ad and press Evaluate — <b>one AI call runs everything</b>: extraction, fit score, red flags, scam screen, and the gov.uk legal audit, then auto-fills the Crime and Transit tabs. One click, all five tabs populated.</div>
+    <label>Listing text</label>
+    <textarea id="listingText" placeholder="Paste everything: title, description, price, address/area, agent details…"></textarea>
+    <button class="ghost" id="extractBtn">✨ Extract details & autofill all tabs</button>
+    <div class="spin" id="extractSpin"><div class="loader"></div>Extracting listing details…</div>
+    <div class="err" id="extractErr"></div>
+    <div id="extractResult"></div>
+    <div class="row">
+      <div><label>Flat postcode or district (autofilled — ads rarely give full postcodes, so this may be an estimated district like "E14")</label><input id="listingPostcode" placeholder="e.g. E14 9GE or just E14"></div>
+      <div><label>Typical rent for similar flats in this area (£/month, from your own browsing — used for the underpricing check)</label><input id="areaTypicalRent" type="number" placeholder="e.g. 1900"></div>
+    </div>
+    <button class="primary" id="evalBtn">Evaluate flat</button>
+    <div class="spin" id="evalSpin"><div class="loader"></div>Analysing listing…</div>
+    <div class="err" id="evalErr"></div>
+  </div>
+  <div id="evalResult"></div>
+</section>
+
+<!-- ============ LEGAL AUDIT ============ -->
+<section class="panel" id="panel-legal">
+  <div class="card">
+    <h2>UK legal compliance audit</h2>
+    <div class="sub">Fact-checks the listing's fees, deposits and deposit-protection statements against embedded gov.uk source documents only. The model's own legal knowledge is off-limits: every verdict must quote the source, or return NOT FOUND.</div>
+    <div class="srcbadge">📚 Sources embedded verbatim: <b>Tenant Fees Act 2019 — guidance for tenants</b> (gov.uk, updated 7 Jul 2026) · <b>Tenancy deposit protection</b> (gov.uk). Applies to England. Re-check sources before relying on this: laws change.</div>
+    <div id="calcBox" class="note"></div>
+    <button class="primary" id="legalBtn">Run legal audit on current listing</button>
+    <div class="spin" id="legalSpin"><div class="loader"></div>Checking claims against gov.uk sources…</div>
+    <div class="err" id="legalErr"></div>
+  </div>
+  <div id="legalResult"></div>
+</section>
+
+<!-- ============ RISKS ============ -->
+<section class="panel" id="panel-risk">
+  <div class="card">
+    <h2>Area safety — official police data</h2>
+    <div class="sub">Street-level crime reports within ~1 mile, from data.police.uk (official UK police open data). No AI involved: raw counts, latest available month.</div>
+    <div class="row"><div><label>Nearest tube/rail station (or postcode)</label><input id="crimePostcode" placeholder="e.g. Canary Wharf"></div>
+    <div><label>&nbsp;</label><button class="primary" style="margin-top:0" id="crimeBtn">Check crime data</button></div></div>
+    <div class="spin" id="crimeSpin"><div class="loader"></div>Fetching police.uk data…</div>
+    <div class="err" id="crimeErr"></div>
+    <div id="crimeResult"></div>
+  </div>
+
+  <div class="card">
+    <h2>Scam likelihood — listing text analysis</h2>
+    <div class="sub">Checks the listing against known London rental scam patterns. Assesses only what is in the text; absence of signals is reported as "no signals detected", never "safe".</div>
+    <button class="primary" id="scamBtn">Assess scam signals</button>
+    <div class="spin" id="scamSpin"><div class="loader"></div>Screening for scam patterns…</div>
+    <div class="err" id="scamErr"></div>
+    <div id="scamResult"></div>
+  </div>
+
+  <div class="card">
+    <h2>Price risk</h2>
+    <div class="sub" id="priceRiskBox">Run an evaluation first. If you provided your own researched comparable, the comparison is computed deterministically. Otherwise the AI gives a rough range from training knowledge — clearly labelled as unverified, with one-click links to check the real market.</div>
+  </div>
+</section>
+
+<!-- ============ TRANSIT ============ -->
+<section class="panel" id="panel-transit">
+  <div class="card">
+    <h2>Connectivity assessment</h2>
+    <div class="sub">Geocodes via postcodes.io, live public-transport routing via the TfL Journey Planner API, walking/cycling/taxi estimated from road distance. Map shows the journey; tube legs listed with line colours.</div>
+    <div class="row">
+      <div><label>From — nearest station or postcode</label><input id="fromPc" placeholder="e.g. Canary Wharf or E14"></div>
+      <div><label>To — destination</label><input id="toPc" placeholder="postcode, or pick an anchor below">
+        <div class="intel-links" style="margin-top:8px">
+          <a href="#" class="anchor-chip" data-pc="WC2E 9DD">📍 Covent Garden</a>
+          <a href="#" class="anchor-chip" data-pc="E1 6GY">📍 Shoreditch</a>
+          <a href="#" class="anchor-chip" data-pc="">📍 My work anchor (⚙️)</a>
+        </div>
+      </div>
+    </div>
+    <button class="primary" id="transitBtn">Assess connectivity</button>
+    <div class="spin" id="transitSpin"><div class="loader"></div>Planning journey…</div>
+    <div class="err" id="transitErr"></div>
+    <div id="transitStats"></div>
+    <div id="map"></div>
+    <div class="legs" id="legs"></div>
+    <div class="note">Tube/bus time and route: live from TfL. Walking assumes 4.8 km/h, cycling 14 km/h, taxi 18 km/h average in London traffic (estimates on road distance ≈ straight line × 1.4). Taxi fare rough guide: £3.80 flagfall + ~£2.60/km.</div>
+  </div>
+</section>
+
+<!-- ============ COMPARE ============ -->
+<section class="panel" id="panel-compare">
+  <div class="card">
+    <h2>Compare saved flats</h2>
+    <div class="sub">Every evaluation is saved automatically on this device.</div>
+    <div id="compareTable"><div class="empty">No flats evaluated yet.</div></div>
+    <button class="ghost" id="clearSaved">Clear all saved flats</button>
+  </div>
+</section>
+
+</main>
+
+<!-- ============ SETTINGS MODAL ============ -->
+<div class="modal-bg" id="modalBg"><div class="modal">
+  <h2>Settings</h2>
+  <div class="sub">Stored on this device only.</div>
+  <label>AI provider</label>
+  <select id="provider">
+    <option value="gemini">Google Gemini — FREE tier (aistudio.google.com → Get API key)</option>
+    <option value="openrouter">OpenRouter — FREE models (openrouter.ai, works in HK)</option>
+    <option value="groq">Groq / Llama — FREE tier (console.groq.com — blocked in Hong Kong)</option>
+    <option value="anthropic">Anthropic Claude — paid (console.anthropic.com)</option>
+  </select>
+  <label>API key</label>
+  <input id="apiKey" type="password" placeholder="paste the key for the provider above">
+  <div class="note">The key is used directly from your browser to the provider; never sent anywhere else. Gemini free quota resets daily at midnight Pacific time. If this page runs inside claude.ai as an artifact, Claude is used with no key.</div>
+  <label>Model</label>
+  <input id="modelName" value="gemini-flash-latest">
+  <div class="note">Defaults: gemini-flash-latest (alias, always points at Google's newest Flash model) · llama-3.3-70b-versatile · claude-sonnet-4-5. Changing provider resets this field. If a model 404s, check the provider's current model list — names change every few months.</div>
+  <label>Monthly budget (£)</label>
+  <input id="budget" type="number" placeholder="e.g. 1800">
+  <label>Work / anchor postcode</label>
+  <input id="anchorPc" placeholder="e.g. EC2M 4NS">
+  <label>Max commute (minutes)</label>
+  <input id="maxCommute" type="number" placeholder="e.g. 40">
+  <div class="row">
+    <div><label>Rooms</label><select id="prefRooms"><option value="">any</option><option>studio</option><option>1 bedroom</option><option>2 bedrooms</option><option>3+ bedrooms</option><option>room in flatshare</option></select></div>
+    <div><label>Max flatmates</label><select id="prefMates"><option value="">any</option><option>live alone</option><option>max 1</option><option>max 2</option><option>max 3</option><option>max 4</option></select></div>
+  </div>
+  <div class="row">
+    <div><label>Flatmate gender</label><select id="prefGender"><option value="">no preference</option><option>female only</option><option>male only</option><option>mixed OK</option></select></div>
+    <div><label>Smoking</label><select id="prefSmoking"><option value="">no preference</option><option>must be non-smoking</option><option>smoking OK</option></select></div>
+  </div>
+  <div class="row">
+    <div><label>Windows</label><select id="prefWindows"><option value="">no preference</option><option>bedroom must have windows</option></select></div>
+    <div><label>Max walk to tube</label><select id="prefTube"><option value="">any</option><option>5 min</option><option>10 min</option><option>15 min</option></select></div>
+  </div>
+  <div class="row">
+    <div><label>Furnished</label><select id="prefFurnished"><option value="">any</option><option>furnished</option><option>unfurnished</option></select></div>
+    <div><label>Flatmate preferences (free text)</label><input id="prefMatesBg" placeholder="e.g. Asian flatmates, young professionals"></div>
+  </div>
+  <label>Other must-haves</label>
+  <input id="mustHaves" placeholder="not ground floor, …">
+  <label>Other deal-breakers</label>
+  <input id="dealBreakers" placeholder="no basement flats, …">
+  <button class="primary" id="saveSettings">Save</button>
+</div></div>
+
+<script>
+/* ================= EMBEDDED SOURCE DOCUMENTS (verbatim extracts, gov.uk) ================= */
+const SOURCE_DOCS = `
+=== SOURCE 1: "Tenant Fees Act 2019: guidance for tenants" — GOV.UK, Ministry of Housing, Communities and Local Government. Published 7 April 2026, last updated 7 July 2026. Applies to England. URL: https://www.gov.uk/guidance/tenant-fees-act-2019-guidance-for-tenants ===
+
+The Tenant Fees Act 2019 defines what fees and payments your landlord can ask you to pay. 'Landlord' in this document also means letting agent, estate agent or a building management organisation.
+
+These are the fees that your landlord is allowed to charge you: the rent, if you and your landlord have signed the tenancy agreement; a refundable tenancy deposit; a refundable holding deposit to reserve a property; a payment to change the tenancy when you ask to; a payment when you leave a tenancy without giving enough notice; a payment towards utility bills and communication services; a fee for late payment of rent; a fee for replacing a key or security device.
+
+RENT: The rent must not be more than the advertised amount and your landlord must clearly explain to you what is included when agreeing to rent the property. You should not pay any rent before you sign a tenancy agreement. After you have signed the tenancy agreement, your landlord can ask you to pay a maximum of 1 month's rent before the tenancy start date. This is known as 'rent in advance'.
+
+REFUNDABLE TENANCY DEPOSIT: The maximum amount you would have to pay depends on the annual (yearly) rent. If the annual rent is below £50,000 the maximum deposit is up to 5 weeks' rent. If the annual rent is between £50,000 and £100,000 the maximum deposit is up to 6 weeks' rent. Your landlord has to keep your deposit money safe by protecting it in a government approved scheme.
+
+REFUNDABLE HOLDING DEPOSIT: The maximum holding deposit amount is equal to 1 week's rent. Your landlord can hold the deposit for 15 days, unless they have agreed a longer or shorter time period with you in writing. You should always get your holding deposit money back unless: you give false or misleading information to try to get the tenancy; you change your mind and decide not to rent that property; you do not reply to requests for information, documents or action; you fail a Right to Rent check. If your landlord keeps the holding deposit they must tell you why in writing within 7 days. If your landlord returns the holding deposit they must give it back within 7 days.
+
+UTILITIES: The costs of utilities like gas, electricity, water bills and services like broadband and a landline phone can be included in your rent payment. If some or all of these bills are included, they must be listed as terms in your tenancy agreement. Any bills included must reflect the actual costs. Your landlord cannot require you to make a separate payment to them for council tax. Your landlord cannot require you to make a separate payment to them for a television licence.
+
+FEES FOR TENANCY CHANGES: When you ask for a change to the tenancy agreement (for example, to add or remove a person) you can be charged up to £50 for the work involved or a higher amount if the work costs more.
+
+ENDING TENANCY WITHOUT CORRECT NOTICE: If you give less than the minimum amount of notice to end the tenancy, your landlord can require a payment. This cannot be more than the amount of rent due until the minimum notice period ends (2 months starting on the day rent is due).
+
+DEFAULT FEES: Your landlord must include any default fees you are expected to pay in the tenancy agreement. You can be charged a default fee: for replacement keys, security devices or fobs giving access to the property; for late payment of rent. Your rent must be overdue by at least 2 weeks before you can be charged interest. The maximum amount of interest is 3% above the Bank of England base rate.
+
+PROHIBITED PAYMENTS: If your landlord charges you a fee that is not allowed this is called a prohibited payment. You can choose to use a professional guarantor service, contents insurance, a deposit replacement product, or an inventory service, but your landlord is not allowed to make you pay for a loan, pay for insurance or start a contract for a service as part of your tenancy. If your landlord asks you for a fee that is not allowed, you should refuse to pay it and you should keep any evidence. You can contact your local council who can investigate prohibited payments. You can also apply to a First-Tier Tribunal.
+
+=== SOURCE 2: "Tenancy deposit protection" — GOV.UK. URL: https://www.gov.uk/tenancy-deposit-protection ===
+
+Your landlord must put your deposit in a government-approved tenancy deposit scheme (TDP) if you rent your home on an assured shorthold tenancy that started after 6 April 2007. In England and Wales your deposit can be registered with: Deposit Protection Service; MyDeposits; Tenancy Deposit Scheme. Your landlord or letting agent must put your deposit in the scheme within 30 days of getting it. Your landlord must return your deposit within 10 days of you both agreeing how much you'll get back. Your landlord does not have to protect a holding deposit (money you pay to 'hold' a property before an agreement is signed). Once you become a tenant, the holding deposit becomes a deposit, which they must protect.
+`;
+
+/* ================= STATE ================= */
+let S = { provider:'gemini', apiKey:'', modelName:'gemini-flash-latest', budget:'', anchorPc:'', maxCommute:'', mustHaves:'', dealBreakers:'', prefRooms:'', prefMates:'', prefGender:'', prefSmoking:'', prefWindows:'', prefTube:'', prefFurnished:'', prefMatesBg:'' };
+const SETTINGS_KEYS = ["provider","apiKey","modelName","budget","anchorPc","maxCommute","mustHaves","dealBreakers","prefRooms","prefMates","prefGender","prefSmoking","prefWindows","prefTube","prefFurnished","prefMatesBg"];
+function prefsText(){
+  const parts=[];
+  if(S.prefRooms) parts.push("rooms: "+S.prefRooms);
+  if(S.prefMates) parts.push("flatmates: "+S.prefMates);
+  if(S.prefGender) parts.push("flatmate gender: "+S.prefGender);
+  if(S.prefSmoking) parts.push(S.prefSmoking);
+  if(S.prefWindows) parts.push(S.prefWindows);
+  if(S.prefTube) parts.push("max "+S.prefTube+" walk to a tube/rail station");
+  if(S.prefFurnished) parts.push(S.prefFurnished);
+  if(S.prefMatesBg) parts.push("flatmate preference: "+S.prefMatesBg);
+  if(S.mustHaves) parts.push("must-haves: "+S.mustHaves);
+  if(S.dealBreakers) parts.push("deal-breakers: "+S.dealBreakers);
+  return parts.join("; ")||"-";
+}
+let lastExtract = null;
+const DEFAULT_MODELS = { gemini:'gemini-flash-latest', groq:'llama-3.3-70b-versatile', openrouter:'meta-llama/llama-3.3-70b-instruct:free', anthropic:'claude-sonnet-4-5' };
+let saved = [];
+try { S = Object.assign(S, JSON.parse(localStorage.getItem('fc_settings')||'{}')); saved = JSON.parse(localStorage.getItem('fc_saved')||'[]'); } catch(e){}
+let lastEval = null;
+
+/* ================= LLM CALL (Claude) ================= */
+async function apiFetch(url, opts, label){
+  let r;
+  try { r = await fetch(url, opts); }
+  catch(e){ throw new Error(label+" connection failed ("+e.message+"). Checklist: 1) API key pasted AND Save clicked in ⚙️ Settings; 2) internet connection; 3) ad-blockers or VPNs can block API calls — try disabling; 4) if opened inside claude.ai as an artifact, external APIs are blocked — run the file locally in your browser instead."); }
+  return r;
+}
+async function callLLM(systemPrompt, userPrompt, maxTokens=8000){
+  if (window.claude && window.claude.complete) {
+    return await window.claude.complete(systemPrompt + "\n\n" + userPrompt);
+  }
+  if (!S.apiKey) throw new Error("No API key set. Open ⚙️ Settings, pick a provider (Gemini and Groq are free) and paste its API key.");
+  if (S.provider === "gemini") {
+    const r = await apiFetch(`https://generativelanguage.googleapis.com/v1beta/models/${S.modelName}:generateContent?key=${encodeURIComponent(S.apiKey)}`, {
+      method:"POST", headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({ systemInstruction:{ parts:[{text:systemPrompt}] },
+        contents:[{ role:"user", parts:[{text:userPrompt}] }],
+        generationConfig:{ maxOutputTokens:maxTokens, responseMimeType:"application/json" } })
+    });
+    if(!r.ok){ const t=await r.text(); throw new Error("Gemini API error "+r.status+(r.status===404?" — model name outdated; check ai.google.dev/gemini-api/docs/models and update it in ⚙️ Settings":r.status===429?" — quota hit. Try model 'gemini-flash-lite-latest' in ⚙️ Settings (lite models have much higher free limits), wait a minute (per-minute limits are tight), or switch provider":"")+": "+t.slice(0,300)); }
+    const d = await r.json();
+    return (d.candidates?.[0]?.content?.parts||[]).map(p=>p.text||"").join("");
+  }
+  if (S.provider === "groq" || S.provider === "openrouter") {
+    const url = S.provider==="groq" ? "https://api.groq.com/openai/v1/chat/completions" : "https://openrouter.ai/api/v1/chat/completions";
+    const r = await apiFetch(url, {
+      method:"POST", headers:{ "Content-Type":"application/json", "Authorization":"Bearer "+S.apiKey },
+      body: JSON.stringify({ model:S.modelName, max_tokens:maxTokens, response_format:{type:"json_object"},
+        messages:[{role:"system",content:systemPrompt},{role:"user",content:userPrompt}] })
+    });
+    if(!r.ok){ const t=await r.text(); const P = S.provider==="groq"?"Groq":"OpenRouter";
+      throw new Error(P+" API error "+r.status+(
+        r.status===429? (S.provider==="openrouter"?" — this free model's shared pool is busy right now. Wait a minute and retry, or pick another free model at openrouter.ai/models (filter: free) and paste it in ⚙️ Settings, or switch provider to Gemini":" — rate limit hit; wait and retry")
+        :r.status===404||r.status===400?" — model may be retired; check the provider's model list and update it in ⚙️ Settings"
+        :r.status===401?" — key invalid; regenerate it on the provider's site":"")+": "+t.slice(0,300)); }
+    const d = await r.json();
+    return d.choices?.[0]?.message?.content || "";
+  }
+  const r = await apiFetch("https://api.anthropic.com/v1/messages", {
+    method:"POST",
+    headers:{ "Content-Type":"application/json", "x-api-key":S.apiKey,
+      "anthropic-version":"2023-06-01", "anthropic-dangerous-direct-browser-access":"true" },
+    body: JSON.stringify({ model:S.modelName, max_tokens:maxTokens, system:systemPrompt,
+      messages:[{role:"user", content:userPrompt}] })
+  });
+  if(!r.ok){ const t = await r.text(); throw new Error("API error "+r.status+": "+t.slice(0,300)); }
+  const d = await r.json();
+  return d.content.map(c=>c.text||"").join("");
+}
+function parseJSON(text){
+  let t = text.trim().replace(/^```(json)?/gi,"").replace(/```/g,"").trim();
+  try { return JSON.parse(t); } catch(e){}
+  // balanced-brace scan: find the first { whose matching } yields valid JSON
+  for(let start=t.indexOf("{"); start>=0; start=t.indexOf("{", start+1)){
+    let depth=0, inStr=false, escp=false;
+    for(let i=start;i<t.length;i++){
+      const c=t[i];
+      if(inStr){ if(escp) escp=false; else if(c==="\\") escp=true; else if(c==='"') inStr=false; }
+      else{ if(c==='"') inStr=true; else if(c==="{") depth++; else if(c==="}"){ depth--; if(depth===0){
+        try{ return JSON.parse(t.slice(start,i+1)); }catch(e){ break; }
+      }}}
+    }
+  }
+  // truncation repair: model output was cut mid-JSON — close open strings/braces and retry
+  let start=t.indexOf("{");
+  if(start>=0){
+    let frag=t.slice(start), inStr=false, escp=false, stack=[];
+    for(const c of frag){
+      if(inStr){ if(escp) escp=false; else if(c==="\\") escp=true; else if(c==='"') inStr=false; }
+      else{ if(c==='"') inStr=true; else if(c==="{") stack.push("}"); else if(c==="[") stack.push("]"); else if(c==="}"||c==="]") stack.pop(); }
+    }
+    let repaired=frag.replace(/,\s*$/,"");
+    if(inStr) repaired+='"';
+    repaired+=stack.reverse().join("");
+    try{ return JSON.parse(repaired); }catch(e){}
+  }
+  throw new Error("Model did not return valid JSON (possibly truncated — try again). Raw start: "+t.slice(0,120));
+}
+const esc = s => String(s??"").replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+/* ================= TABS ================= */
+document.querySelectorAll(".tab-btn").forEach(b=>b.addEventListener("click",()=>{
+  document.querySelectorAll(".tab-btn").forEach(x=>x.classList.remove("active"));
+  document.querySelectorAll(".panel").forEach(x=>x.classList.remove("active"));
+  b.classList.add("active");
+  document.getElementById("panel-"+b.dataset.tab).classList.add("active");
+  if(b.dataset.tab==="legal") renderCalc();
+  if(b.dataset.tab==="compare") renderCompare();
+  if(b.dataset.tab==="transit" && map) setTimeout(()=>map.invalidateSize(),100);
+}));
+
+/* ================= SETTINGS ================= */
+const modalBg = document.getElementById("modalBg");
+document.getElementById("settingsBtn").onclick = ()=>{
+  SETTINGS_KEYS.forEach(k=>document.getElementById(k).value = S[k]||"");
+  modalBg.classList.add("on");
+};
+modalBg.addEventListener("click", e=>{ if(e.target===modalBg) modalBg.classList.remove("on"); });
+document.getElementById("provider").addEventListener("change", e=>{
+  document.getElementById("modelName").value = DEFAULT_MODELS[e.target.value] || "";
+});
+document.getElementById("saveSettings").onclick = ()=>{
+  SETTINGS_KEYS.forEach(k=>S[k]=document.getElementById(k).value.trim());
+  try{ localStorage.setItem("fc_settings", JSON.stringify(S)); }catch(e){}
+  modalBg.classList.remove("on");
+};
+
+/* ================= HELPERS ================= */
+function busy(id,on){ document.getElementById(id).classList.toggle("on",on); }
+function showErr(id,msg){ const e=document.getElementById(id); e.style.display=msg?"block":"none"; e.textContent=msg||""; }
+async function geocode(pc){
+  pc = pc.trim();
+  let r = await fetch("https://api.postcodes.io/postcodes/"+encodeURIComponent(pc));
+  if(r.ok){ const d = await r.json(); return d.result; }
+  // fallback: district/outcode only (e.g. "E14") — ads rarely give full postcodes
+  const out = pc.split(" ")[0];
+  r = await fetch("https://api.postcodes.io/outcodes/"+encodeURIComponent(out));
+  if(r.ok){ const d = await r.json(); const res = d.result; res.approx = true; return res; }
+  throw new Error("Postcode or district not found: "+pc);
+}
+// accepts a station name OR a postcode/district; returns {latitude, longitude, place}
+async function geocodeAny(q){
+  q = q.trim();
+  const looksPostcode = /^[A-Za-z]{1,2}\d[A-Za-z\d]?(\s*\d[A-Za-z]{2})?$/.test(q);
+  if(looksPostcode){ const g = await geocode(q); return { latitude:g.latitude, longitude:g.longitude, place:q.toUpperCase()+(g.approx?" (district centre)":"") }; }
+  // station name → TfL StopPoint search
+  const r = await fetch(`https://api.tfl.gov.uk/StopPoint/Search/${encodeURIComponent(q)}?modes=tube,dlr,overground,elizabeth-line,national-rail`);
+  if(r.ok){ const d = await r.json();
+    const m = (d.matches||[])[0];
+    if(m) return { latitude:m.lat, longitude:m.lon, place:m.name };
+  }
+  // last resort: try as postcode anyway
+  const g = await geocode(q); return { latitude:g.latitude, longitude:g.longitude, place:q.toUpperCase() };
+}
+function extractRent(text){
+  const m = text.replace(/,/g,"").match(/£\s*(\d{3,5})\s*(pcm|per month|\/month|p\/m|a month|monthly)/i);
+  if(m) return parseInt(m[1]);
+  const w = text.replace(/,/g,"").match(/£\s*(\d{2,4})\s*(pw|per week|\/week|p\/w|a week|weekly)/i);
+  if(w) return Math.round(parseInt(w[1])*52/12);
+  return null;
+}
+
+/* ================= EXTRACT & AUTOFILL ================= */
+function autoFillAndRenderExtract(j){
+    const loc = (j.nearest_stations||[])[0] || j.estimated_outcode;
+  if(j.estimated_outcode) document.getElementById("listingPostcode").value = j.estimated_outcode;
+  if(loc){ document.getElementById("crimePostcode").value = loc; document.getElementById("fromPc").value = loc; }
+  const chips = [["£/month",j.rent_pcm],["type",j.property_type],["rooms",j.rooms],["furnished",j.furnished],["bills",j.bills_included],["area",j.area],["stations",(j.nearest_stations||[]).join(", ")],["district",j.estimated_outcode],["available",j.available_from],["agent",j.agent_or_landlord]].filter(x=>x[1]);
+  document.getElementById("extractResult").innerHTML = `<div class="card" style="margin-top:12px"><h2>📋 ${esc(j.label||"Extracted details")}</h2>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">${chips.map(([k,v])=>`<span class="srcbadge"><b>${esc(k)}:</b> ${esc(v)}</span>`).join("")}</div>
+    <div class="note">📍 Location estimate: ${esc(j.outcode_reasoning||"—")} — crime, transit and intel tabs autofilled with district <b>${esc(j.estimated_outcode||"n/a")}</b>. District-level is approximate; results use the district centre.</div></div>`;
+}
+
+document.getElementById("extractBtn").onclick = async ()=>{
+  const listing = document.getElementById("listingText").value.trim();
+  if(!listing) return showErr("extractErr","Paste a listing first.");
+  showErr("extractErr",""); busy("extractSpin",true);
+  const sys = `You extract structured facts from London rental listings. Use ONLY what is in the text. Ads rarely include full postcodes for safety, so ESTIMATE the location from clues (street names, area names, nearest stations, landmarks) and give your best-guess postcode DISTRICT (outcode like "E14", "SW2") with your reasoning. Mark every estimated field with "(estimated)".
+Respond STRICT JSON:
+{"rent_pcm":"number or null","deposit_stated":"text or null","area":"...","street_or_landmark":"...","nearest_stations":["..."],"estimated_outcode":"e.g. E14 or null","outcode_reasoning":"which clues you used","property_type":"...","rooms":"...","furnished":"...","bills_included":"...","available_from":"...","agent_or_landlord":"...","label":"short unique name for this property using its most distinctive feature, e.g. 'Canary Wharf 2-bed nr South Quay' "}`;
+  try{
+    const j = parseJSON(await callLLM(sys,"LISTING:\n"+listing));
+    lastExtract = j;
+    // autofill across tabs
+    autoFillAndRenderExtract(j);
+  }catch(err){ showErr("extractErr", err.message); }
+  busy("extractSpin",false);
+};
+
+/* ================= EVALUATE ================= */
+document.getElementById("evalBtn").onclick = async ()=>{
+  const listing = document.getElementById("listingText").value.trim();
+  if(!listing) return showErr("evalErr","Paste a listing first.");
+  showErr("evalErr",""); busy("evalSpin",true); document.getElementById("evalBtn").disabled=true;
+  const typical = document.getElementById("areaTypicalRent").value;
+  const sys = `You are a skeptical London rental advisor for someone relocating from Hong Kong who cannot view flats in person yet. Produce FOUR analyses of one listing in a SINGLE response.
+
+GLOBAL RULES:
+- Use ONLY information in the listing and user data. Never invent facts. Absence of red flags means "no signals detected in the text", never "safe".
+- Never state real-time figures you cannot know (exchange rates, live market prices).
+
+ANALYSIS 1 - EXTRACTION: pull structured facts. Ads rarely include full postcodes, so ESTIMATE the postcode district (outcode) from street/station/landmark clues and mark estimates.
+
+ANALYSIS 2 - EVALUATION: score fit against the user criteria, penalising missing information rather than assuming the best. Each red flag needs severity and evidence quoted from the listing (check: payment before viewing, pressure to skip/rush in-person viewing, no exact address, landlord-abroad story, off-platform contact, missing deposit protection details). If the user provided a typical area rent, use it for the price check; otherwise give market_estimate as a rough UNVERIFIED training-data range and say so in price_check.
+
+ANALYSIS 3 - SCAM SCREEN: score each signal present/absent/unknown with exact quotes: payment before any viewing; pressure against in-person viewing; no exact address; contact pushed off-platform; landlord abroad; documents requested before viewing.
+
+ANALYSIS 4 - LEGAL AUDIT: use ONLY the SOURCE DOCUMENTS provided; your own legal knowledge is off-limits even if confident. Extract every fee/deposit/rent-in-advance/deposit-protection claim in the listing. Verdict each SUPPORTED / CONTRADICTED / PARTIALLY SUPPORTED / NOT FOUND with the exact source sentence quoted. Watch conditions and thresholds (e.g. the 5-week cap applies only under £50,000 annual rent). No quote means NOT FOUND. Also list what the listing is silent on.
+
+Respond with ONE STRICT JSON object, no markdown:
+{"extract":{"rent_pcm":0,"area":"","street_or_landmark":"","nearest_stations":[],"estimated_outcode":"","outcode_reasoning":"","property_type":"","rooms":"","furnished":"","bills_included":"","available_from":"","agent_or_landlord":"","label":"short distinctive property name"},
+"evaluation":{"fit_score":0,"score_reasoning":"","property_label":"","market_estimate":"rough unverified range or null","red_flags":[{"flag":"","severity":"high|medium|low","evidence":""}],"missing_info":[],"viewing_questions":["5 specific questions"],"move_in_costs":[{"item":"","estimate_gbp":"number or unknown","basis":""}],"price_check":""},
+"scam":{"signals":[{"signal":"","status":"present|absent|unknown","quote":""}],"overall_risk":"high|medium|low","strongest_signal":"","note":""},
+"legal":{"claims":[{"claim":"","verdict":"","source_quote":"","explanation":""}],"silent_on":[],"overall":""}}`;
+  const user = `MY CRITERIA: budget £${S.budget||"?"}/month max; anchor postcode ${S.anchorPc||"?"}; max commute ${S.maxCommute||"?"} min; preferences: ${prefsText()}.
+TYPICAL AREA RENT (user-researched comparable): ${typical? "£"+typical+"/month" : "NOT PROVIDED"}.
+
+SOURCE DOCUMENTS (for the legal audit ONLY):
+${SOURCE_DOCS}
+
+LISTING:
+${listing}`;
+  try{
+    const j = parseJSON(await callLLM(sys,user,8000));
+    if(j.extract){ lastExtract = j.extract; autoFillAndRenderExtract(j.extract); }
+    const ev = j.evaluation||{};
+    lastEval = { when:new Date().toISOString(), listing, label:ev.property_label||lastExtract?.label||document.getElementById("listingPostcode").value.trim()||"Flat "+(saved.length+1), postcode:document.getElementById("listingPostcode").value.trim(), rent:extractRent(listing)||lastExtract?.rent_pcm, eval:ev };
+    saved.push(lastEval); try{ localStorage.setItem("fc_saved", JSON.stringify(saved)); }catch(e){}
+    renderEval(ev);
+    renderScamResult(j.scam);
+    renderLegalAudit(j.legal);
+    renderCalc();
+    renderPriceRisk();
+    renderCompare();
+    // auto-run the free data lookups (no AI quota used)
+    const loc = document.getElementById("crimePostcode").value.trim();
+    if(loc){ try{ await document.getElementById("crimeBtn").onclick(); }catch(e){}
+             try{ await document.getElementById("transitBtn").onclick(); }catch(e){} }
+  }catch(err){ showErr("evalErr", err.message); }
+  busy("evalSpin",false); document.getElementById("evalBtn").disabled=false;
+};
+function renderEval(j){
+  const sevRank={high:0,medium:1,low:2};
+  const flags=(j.red_flags||[]).sort((a,b)=>sevRank[a.severity]-sevRank[b.severity]);
+  const color = j.fit_score>=7?"var(--good)":j.fit_score>=4?"var(--warn)":"var(--bad)";
+  document.getElementById("evalResult").innerHTML = `
+  <div class="card"><div class="score-ring">
+    <div class="big-score" style="color:${color}">${esc(j.fit_score)}<small>/10</small></div>
+    <div style="font-size:14px;line-height:1.6">${esc(j.score_reasoning)}<div class="note"><b>Price check:</b> ${esc(j.price_check)}</div></div>
+  </div></div>
+  <div class="card"><h2>🚩 Red flags</h2>
+    ${flags.length? flags.map(f=>`<div class="flag-item"><span class="pill ${esc(f.severity)}">${esc(f.severity)}</span><div class="txt">${esc(f.flag)}<div class="quote">${esc(f.evidence)}</div></div></div>`).join("") : '<div class="empty">No signals detected in the text provided.</div>'}
+  </div>
+  <div class="card"><h2>❓ Missing information</h2>
+    ${(j.missing_info||[]).map(m=>`<div class="flag-item"><div class="txt">${esc(m)}</div></div>`).join("")||'<div class="empty">—</div>'}
+  </div>
+  <div class="card"><h2>🗣️ Ask at the viewing</h2>
+    ${(j.viewing_questions||[]).map((q,i)=>`<div class="flag-item"><b>${i+1}.</b><div class="txt">${esc(q)}</div></div>`).join("")}
+  </div>
+  <div class="card"><h2>💷 Move-in cost estimate</h2>
+    <table><tr><th>Item</th><th>Estimate</th><th>Basis</th></tr>
+    ${(j.move_in_costs||[]).map(c=>`<tr><td>${esc(c.item)}</td><td>${c.estimate_gbp==="unknown"?"unknown":"£"+esc(c.estimate_gbp)}</td><td>${esc(c.basis)}</td></tr>`).join("")}
+    </table>
+    <div class="note">For HKD conversion, check a live source such as Wise or XE — this app deliberately does not guess exchange rates.</div>
+  </div>`;
+}
+
+/* ================= LEGAL AUDIT ================= */
+function renderCalc(){
+  const listing = document.getElementById("listingText").value;
+  const rent = extractRent(listing||"");
+  const box = document.getElementById("calcBox");
+  if(!rent){ box.innerHTML = "💡 Deterministic calculator: paste a listing with a £/month or £/week rent on the Evaluate tab and the legal caps will be computed here (arithmetic done in code, not by the AI)."; return; }
+  const weekly = rent*12/52;
+  box.innerHTML = `💡 <b>Deterministic caps for this listing</b> (computed in code from £${rent}/month): weekly rent ≈ £${weekly.toFixed(0)} · annual rent £${(rent*12).toLocaleString()} → <b>max tenancy deposit ${rent*12<50000?"(5 weeks) ≈ £"+(weekly*5).toFixed(0): rent*12<=100000 ? "(6 weeks) ≈ £"+(weekly*6).toFixed(0) : "— annual rent exceeds £100,000, caps differ"}</b> · max holding deposit (1 week) ≈ £${weekly.toFixed(0)} · max rent in advance: 1 month = £${rent}.`;
+}
+document.getElementById("legalBtn").onclick = async ()=>{
+  const listing = document.getElementById("listingText").value.trim();
+  if(!listing) return showErr("legalErr","Paste a listing on the Evaluate tab first.");
+  showErr("legalErr",""); busy("legalSpin",true);
+  const sys = `You are a fact-checker. You may ONLY use the SOURCE DOCUMENTS provided. Your own knowledge of the law is off-limits, even if you are confident it is correct.
+TASK:
+1. Extract every claim or demand in the LISTING that relates to fees, deposits, rent in advance, deposit protection, or charges (e.g. "admin fee £200", "6 weeks deposit", "deposit protected with DPS").
+2. Classify each as:
+- SUPPORTED (permitted/consistent with the sources): quote the exact source sentence
+- CONTRADICTED (prohibited or exceeds a cap per the sources): quote the exact source sentence and explain the discrepancy
+- PARTIALLY SUPPORTED: correct but missing a condition or threshold stated in the sources
+- NOT FOUND: the sources do not address it
+3. Pay attention to conditions and thresholds (e.g. the 5-week deposit cap applies only where annual rent is under £50,000).
+4. Also list checks the tenant should still make that the listing is silent on (e.g. which deposit protection scheme).
+Respond with STRICT JSON only:
+{"claims":[{"claim":"...","verdict":"SUPPORTED|CONTRADICTED|PARTIALLY SUPPORTED|NOT FOUND","source_quote":"exact sentence or empty","explanation":"..."}],
+ "silent_on":["..."], "overall":"1-2 sentence compliance summary"}
+If you cannot find a quote, the verdict must be NOT FOUND. Never guess.`;
+  const user = "SOURCE DOCUMENTS:\n"+SOURCE_DOCS+"\n\nLISTING (OUTPUT UNDER REVIEW):\n"+listing;
+  try{
+    const j = parseJSON(await callLLM(sys,user,3500));
+    renderLegalAudit(j);
+  }catch(err){ showErr("legalErr", err.message); }
+  busy("legalSpin",false);
+};
+function renderLegalAudit(j){
+  if(!j) return;
+  document.getElementById("legalResult").innerHTML = `
+    <div class="card"><h2>Audit result</h2><div class="sub">${esc(j.overall)}</div>
+    <table><tr><th>Claim in listing</th><th>Verdict</th><th>Source quote</th></tr>
+    ${(j.claims||[]).map(c=>`<tr><td>${esc(c.claim)}</td><td><span class="pill ${(c.verdict||"").startsWith("PART")?"PARTIALLY":(c.verdict||"").replace(" ","")}">${esc(c.verdict)}</span><div class="quote" style="font-size:12px;color:var(--muted);margin-top:4px">${esc(c.explanation)}</div></td><td style="font-style:italic;color:var(--muted)">${esc(c.source_quote)||"—"}</td></tr>`).join("")}
+    </table></div>
+    <div class="card"><h2>Listing is silent on</h2>${(j.silent_on||[]).map(s=>`<div class="flag-item"><div class="txt">${esc(s)}</div></div>`).join("")||'<div class="empty">—</div>'}
+    <div class="note">⚠️ This is an AI-generated audit against two gov.uk pages, not legal advice. Spot-check verdicts against the linked sources; for disputes contact Shelter, Citizens Advice, or your local council.</div></div>`;
+}
+
+/* ================= RISK: CRIME ================= */
+document.getElementById("crimeBtn").onclick = async ()=>{
+  const pc = document.getElementById("crimePostcode").value.trim() || document.getElementById("listingPostcode").value.trim();
+  if(!pc) return showErr("crimeErr","Enter a postcode.");
+  showErr("crimeErr",""); busy("crimeSpin",true);
+  try{
+    const g = await geocodeAny(pc);
+    const r = await fetch(`https://data.police.uk/api/crimes-street/all-crime?lat=${g.latitude}&lng=${g.longitude}`);
+    if(!r.ok) throw new Error("police.uk API error "+r.status);
+    const crimes = await r.json();
+    const byCat = {};
+    crimes.forEach(c=>byCat[c.category]=(byCat[c.category]||0)+1);
+    const cats = Object.entries(byCat).sort((a,b)=>b[1]-a[1]);
+    const month = crimes[0]?.month || "latest month";
+    document.getElementById("crimeResult").innerHTML = `
+      <div class="note" style="margin-top:14px"><b>${crimes.length}</b> reported incidents within ~1 mile of <b>${esc(g.place)}</b> in ${esc(month)} (source: data.police.uk).</div>
+      <div class="crime-grid">${cats.slice(0,8).map(([k,v])=>`<div class="crime"><b>${v}</b>${esc(k.replace(/-/g," "))}</div>`).join("")}</div>
+      <div class="note">Raw official counts, not an AI judgment. Compare a few candidate postcodes: relative differences are more informative than absolute numbers.</div>`;
+  }catch(err){ showErr("crimeErr", err.message);
+    document.getElementById("crimeResult").innerHTML = '<div class="note">Could not reach the data API (blocked network or sandbox). Check the area yourself: <a target="_blank" href="https://www.police.uk/pu/your-area/">police.uk crime map</a></div>'; }
+  busy("crimeSpin",false);
+};
+
+/* ================= RISK: SCAM ================= */
+document.getElementById("scamBtn").onclick = async ()=>{
+  const listing = document.getElementById("listingText").value.trim();
+  if(!listing) return showErr("scamErr","Paste a listing on the Evaluate tab first.");
+  showErr("scamErr",""); busy("scamSpin",true);
+  const sys = `You screen London rental listings for scam patterns. Assess ONLY the text provided.
+Score each signal as present / absent / unknown, quoting the listing text where present:
+1. Payment or "holding fee" requested before any viewing
+2. Pressure against in-person viewing (virtual-only, "decide today", "many interested", keys by courier, landlord abroad)
+3. No exact address or only a wide area given
+4. Contact pushed off-platform (WhatsApp/personal email) immediately
+5. Professional photos inconsistent with the described property, or stock-photo tone
+6. Requests for personal documents before viewing
+Respond STRICT JSON: {"signals":[{"signal":"...","status":"present|absent|unknown","quote":"exact listing quote or empty"}],"overall_risk":"high|medium|low","strongest_signal":"...","note":"one sentence"}
+Overall risk low means "no signals detected in the text provided", never "safe".`;
+  try{
+    const j = parseJSON(await callLLM(sys,"LISTING:\n"+listing));
+    renderScamResult(j);
+  }catch(err){ showErr("scamErr", err.message); }
+  busy("scamSpin",false);
+};
+function renderScamResult(j){
+  if(!j) return;
+  document.getElementById("scamResult").innerHTML = `
+      <div style="margin-top:14px"><span class="pill ${esc(j.overall_risk)}">overall: ${esc(j.overall_risk)}</span>
+      <span class="note" style="margin-left:8px">${esc(j.note)}</span></div>
+      ${(j.signals||[]).map(s=>`<div class="flag-item"><span class="pill ${s.status==="present"?"high":s.status==="unknown"?"medium":"low"}">${esc(s.status)}</span><div class="txt">${esc(s.signal)}${s.quote?`<div class="quote">"${esc(s.quote)}"</div>`:""}</div></div>`).join("")}`;
+}
+
+/* ================= RISK: PRICE (deterministic) ================= */
+function renderPriceRisk(){
+  const box = document.getElementById("priceRiskBox");
+  const typical = parseFloat(document.getElementById("areaTypicalRent").value);
+  const rent = lastEval?.rent;
+  const area = lastExtract?.area || document.getElementById("listingPostcode").value.trim() || "london";
+  const checkLinks = `<div class="note">Verify the real market in one click: <a target="_blank" href="https://www.spareroom.co.uk/flatshare/?search=${encodeURIComponent(area)}">SpareRoom ${esc(area)}</a> · <a target="_blank" href="https://www.rightmove.co.uk/property-to-rent/search.html?searchLocation=${encodeURIComponent(area)}">Rightmove ${esc(area)}</a></div>`;
+  if(rent && !typical && lastEval?.eval?.market_estimate){
+    box.innerHTML = `Listing rent £${rent}/month vs <span class="pill medium">unverified AI ballpark</span> ${esc(lastEval.eval.market_estimate)} — this is the model's training-data guess, NOT live market data. Treat as a starting point only.${checkLinks}`;
+    return;
+  }
+  if(!rent || !typical){ if(rent) box.innerHTML = `Listing rent £${rent}/month. No comparable provided.${checkLinks}`; return; }
+  const diff = ((rent-typical)/typical*100);
+  const verdict = diff < -15 ? `<span class="pill high">suspiciously low</span> ${Math.abs(diff).toFixed(0)}% below your researched comparable — classic scam signal, investigate hard` :
+    diff < -5 ? `<span class="pill medium">below market</span> ${Math.abs(diff).toFixed(0)}% below comparable — could be a deal, could be a catch` :
+    diff <= 10 ? `<span class="pill low">in line with market</span> within ${Math.abs(diff).toFixed(0)}% of comparable` :
+    `<span class="pill medium">above market</span> ${diff.toFixed(0)}% above comparable — negotiate or ask what justifies it`;
+  box.innerHTML = `Listing rent £${rent}/month vs your researched comparable £${typical}/month → ${verdict}<div class="note">Computed in code from your own research; the AI is never asked to guess market prices.</div>`;
+}
+
+/* ================= TRANSIT ================= */
+let map=null, mapLayers=[];
+const LINE_COLORS={ "bakerloo":"#B36305","central":"#E32017","circle":"#FFD300","district":"#00782A","hammersmith-city":"#F3A9BB","jubilee":"#A0A5A9","metropolitan":"#9B0056","northern":"#000000","piccadilly":"#003688","victoria":"#0098D4","waterloo-city":"#95CDBA","elizabeth":"#7156A5","dlr":"#00A4A7","london-overground":"#EE7C0E","tram":"#84B817" };
+document.getElementById("transitBtn").onclick = async ()=>{
+  const fromPc = document.getElementById("fromPc").value.trim() || document.getElementById("listingPostcode").value.trim();
+  const toPc = document.getElementById("toPc").value.trim() || S.anchorPc || "WC2N 5DU";
+  if(!fromPc) return showErr("transitErr","Enter the flat postcode.");
+  showErr("transitErr",""); busy("transitSpin",true);
+  try{
+    const [f,t] = await Promise.all([geocodeAny(fromPc), geocodeAny(toPc)]);
+    // straight-line distance (Haversine)
+    const R=6371, dLat=(t.latitude-f.latitude)*Math.PI/180, dLon=(t.longitude-f.longitude)*Math.PI/180;
+    const a=Math.sin(dLat/2)**2+Math.cos(f.latitude*Math.PI/180)*Math.cos(t.latitude*Math.PI/180)*Math.sin(dLon/2)**2;
+    const kmLine=2*R*Math.asin(Math.sqrt(a)), kmRoad=kmLine*1.4;
+    const walkMin=Math.round(kmRoad/4.8*60), cycleMin=Math.round(kmRoad/14*60), taxiMin=Math.round(kmRoad/18*60);
+    const taxiFare=(3.80+kmRoad*2.60).toFixed(0);
+    // TfL journey
+    let tubeMin=null, legs=[];
+    try{
+      const jr = await fetch(`https://api.tfl.gov.uk/Journey/JourneyResults/${f.latitude},${f.longitude}/to/${t.latitude},${t.longitude}?mode=tube,dlr,overground,elizabeth-line,bus,walking&timeIs=Departing`);
+      if(jr.ok){ const jd=await jr.json();
+        const j0=(jd.journeys||[])[0];
+        if(j0){ tubeMin=j0.duration; legs=(j0.legs||[]).map(l=>({mode:l.mode?.id, name:l.routeOptions?.[0]?.name||l.mode?.name||"", summary:l.instruction?.summary||"", mins:l.duration, lineId:(l.routeOptions?.[0]?.lineIdentifier?.id||"").toLowerCase() })); }
+      }
+    }catch(e){ /* TfL may rate-limit anonymous calls; fall back silently */ }
+    const commuteOK = S.maxCommute? (tubeMin!==null? (tubeMin<=+S.maxCommute?`✅ within your ${S.maxCommute}-min limit`:`❌ exceeds your ${S.maxCommute}-min limit`):"") : "";
+    document.getElementById("transitStats").innerHTML = `
+      <div class="note" style="margin-top:12px">${esc(fromPc.toUpperCase())} → ${esc(toPc.toUpperCase())} · ${kmLine.toFixed(1)} km straight line ${commuteOK}</div>
+      <div class="transit-grid">
+        <div class="tmode"><div class="em">🚇</div><div class="t">${tubeMin!==null? tubeMin+" min":"n/a"}</div><div class="l">public transport (live TfL)</div></div>
+        <div class="tmode"><div class="em">🚴</div><div class="t">${cycleMin} min</div><div class="l">cycling (est.)</div></div>
+        <div class="tmode"><div class="em">🚶</div><div class="t">${walkMin} min</div><div class="l">walking (est.)</div></div>
+        <div class="tmode"><div class="em">🚕</div><div class="t">${taxiMin} min</div><div class="l">taxi (est.) ~£${taxiFare}</div></div>
+      </div>`;
+    // map
+    if(!map){ map=L.map("map"); L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:"© OpenStreetMap"}).addTo(map); }
+    mapLayers.forEach(l=>map.removeLayer(l)); mapLayers=[];
+    const m1=L.marker([f.latitude,f.longitude]).addTo(map).bindPopup("🏠 "+fromPc.toUpperCase());
+    const m2=L.marker([t.latitude,t.longitude]).addTo(map).bindPopup("🎯 "+toPc.toUpperCase());
+    const ln=L.polyline([[f.latitude,f.longitude],[t.latitude,t.longitude]],{color:"#4f46e5",weight:3,dashArray:"6 8"}).addTo(map);
+    mapLayers.push(m1,m2,ln);
+    map.fitBounds(ln.getBounds().pad(0.3));
+    document.getElementById("legs").innerHTML = legs.length? "<h2 style='margin:16px 0 6px'>Journey legs (live TfL)</h2>"+legs.map(l=>`<div class="leg"><span class="line-chip" style="background:${LINE_COLORS[l.lineId]||"#9aa1ae"}"></span><b style="min-width:44px">${l.mins} min</b><span>${esc(l.summary||l.name)}</span></div>`).join("") : "<div class='note'>Live TfL routing unavailable right now (anonymous API rate limit) — distance estimates above still apply. Try again in a minute.</div>";
+    setTimeout(()=>map.invalidateSize(),100);
+  }catch(err){ showErr("transitErr", err.message);
+    document.getElementById("transitStats").innerHTML = '<div class="note">Could not reach the transit APIs (blocked network or sandbox). Plan it directly: <a target="_blank" href="https://tfl.gov.uk/plan-a-journey/">TfL Journey Planner</a> · <a target="_blank" href="https://citymapper.com/london">Citymapper</a></div>'; }
+  busy("transitSpin",false);
+};
+
+/* ================= COMPARE ================= */
+function renderCompare(){
+  const el=document.getElementById("compareTable");
+  if(!saved.length){ el.innerHTML='<div class="empty">No flats evaluated yet.</div>'; return; }
+  el.innerHTML = `<table><tr><th>Property</th><th>District</th><th>Rent</th><th>Fit</th><th>High flags</th><th>Evaluated</th></tr>
+  ${saved.map((s,i)=>`<tr><td><b>${esc(s.label||"Flat "+(i+1))}</b></td><td>${esc(s.postcode||"—")}</td><td>${s.rent?"£"+s.rent:"—"}</td><td><b>${esc(s.eval.fit_score)}/10</b></td><td>${(s.eval.red_flags||[]).filter(f=>f.severity==="high").length}</td><td>${new Date(s.when).toLocaleDateString()}</td></tr>`).join("")}</table>`;
+}
+document.getElementById("clearSaved").onclick=()=>{ saved=[]; try{localStorage.setItem("fc_saved","[]");}catch(e){} renderCompare(); };
+
+document.querySelectorAll(".anchor-chip").forEach(a=>a.addEventListener("click",e=>{
+  e.preventDefault();
+  document.getElementById("toPc").value = a.dataset.pc || S.anchorPc || "";
+  if(!a.dataset.pc && !S.anchorPc) alert("Set your work anchor postcode in ⚙️ Settings first.");
+}));
+</script>
+</body>
+</html>

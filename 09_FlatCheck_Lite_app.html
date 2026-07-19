@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FlatCheck Lite</title>
+<style>
+:root{ --bg:#f6f7fb; --card:#fff; --ink:#16181d; --muted:#6b7280; --line:#e5e7eb;
+  --accent:#4f46e5; --good:#059669; --warn:#d97706; --bad:#dc2626; }
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#0f1117; --card:#181b23; --ink:#e8eaf0; --muted:#9aa1ae; --line:#262a35; --accent:#818cf8; }
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink);padding:20px;max-width:760px;margin:0 auto}
+h1{font-size:24px;font-weight:800;margin:10px 0 4px}
+h1 span{color:var(--accent)}
+.sub{color:var(--muted);font-size:14px;margin-bottom:18px;line-height:1.5}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px;margin-bottom:14px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+h2{font-size:15px;font-weight:700;margin-bottom:10px}
+label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin:10px 0 5px;text-transform:uppercase;letter-spacing:.04em}
+textarea,input{width:100%;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:10px;padding:11px;font-size:14px;font-family:inherit}
+textarea{min-height:160px;resize:vertical;line-height:1.5}
+button{background:var(--accent);color:#fff;border:none;border-radius:12px;padding:13px 22px;font-size:15px;font-weight:700;cursor:pointer;margin-top:14px;width:100%}
+button:disabled{opacity:.5;cursor:wait}
+.score{font-size:46px;font-weight:800}
+.score small{font-size:18px;color:var(--muted)}
+.pill{display:inline-block;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:700;margin-right:6px}
+.high{background:#fee2e2;color:#b91c1c}.medium{background:#fef3c7;color:#b45309}.low{background:#dcfce7;color:#15803d}
+.item{padding:10px 0;border-bottom:1px solid var(--line);font-size:14px;line-height:1.55}
+.item:last-child{border:none}
+.q{color:var(--muted);font-size:12.5px;font-style:italic;margin-top:3px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;color:var(--muted);font-size:11px;text-transform:uppercase;padding:6px 8px;border-bottom:2px solid var(--line)}
+td{padding:9px 8px;border-bottom:1px solid var(--line);vertical-align:top;line-height:1.5}
+.note{font-size:12.5px;color:var(--muted);line-height:1.55;margin-top:10px}
+.err{background:#fee2e2;color:#b91c1c;border-radius:10px;padding:12px;font-size:13.5px;margin-top:12px;display:none}
+.spin{display:none;align-items:center;gap:10px;margin-top:12px;color:var(--muted);font-size:14px}
+.loader{width:16px;height:16px;border:2.5px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:r .7s linear infinite}
+@keyframes r{to{transform:rotate(360deg)}}
+#results{display:none}
+</style>
+</head>
+<body>
+
+<h1>Flat<span>Check</span> Lite</h1>
+<div class="sub">Paste a London rental listing. One click checks fit, red flags, scam signals, and legality against official gov.uk rules. Built for renters relocating from overseas.</div>
+
+<div class="card">
+  <label>Your criteria (optional)</label>
+  <input id="criteria" placeholder="e.g. budget £1200/month, room in flatshare, female flatmates, non-smoking, max 10 min walk to tube">
+  <label>Listing text</label>
+  <textarea id="listing" placeholder="Paste the full ad here: title, description, price, area, agent details…"></textarea>
+  <button id="go">Check this flat</button>
+  <div class="spin" id="spin"><div class="loader"></div>Analysing (15–30 seconds)…</div>
+  <div class="err" id="err"></div>
+</div>
+
+<div id="results">
+  <div class="card"><h2>Fit</h2><div id="fit"></div></div>
+  <div class="card"><h2>Red flags</h2><div id="flags"></div></div>
+  <div class="card"><h2>Scam screen</h2><div id="scam"></div></div>
+  <div class="card"><h2>Legal audit — checked against gov.uk sources only</h2>
+    <button id="legalGo" style="margin-top:4px">Run legal audit (15–30s)</button>
+    <div class="spin" id="legalSpin"><div class="loader"></div>Checking claims against gov.uk sources…</div>
+    <div id="legal"></div>
+    <div class="note">Runs separately to keep the main check fast. Sources embedded verbatim: Tenant Fees Act 2019 guidance for tenants (gov.uk, updated 7 Jul 2026) and Tenancy deposit protection (gov.uk). AI-generated audit, not legal advice — verify anything important at gov.uk.</div></div>
+  <div class="card"><h2>Ask at the viewing</h2><div id="questions"></div></div>
+  <div class="card"><h2>Move-in cost estimate</h2><div id="costs"></div>
+    <div class="note">This app never guesses exchange rates or live market prices. For HKD amounts use a live converter; to sense-check the rent, search the area on SpareRoom or Rightmove.</div></div>
+</div>
+
+<script>
+const SOURCE_DOCS = `
+=== SOURCE 1: "Tenant Fees Act 2019: guidance for tenants" - GOV.UK, updated 7 July 2026. Applies to England. ===
+These are the fees that your landlord is allowed to charge you: the rent; a refundable tenancy deposit; a refundable holding deposit to reserve a property; a payment to change the tenancy when you ask to; a payment when you leave a tenancy without giving enough notice; a payment towards utility bills and communication services; a fee for late payment of rent; a fee for replacing a key or security device.
+RENT: The rent must not be more than the advertised amount. You should not pay any rent before you sign a tenancy agreement. After you have signed the tenancy agreement, your landlord can ask you to pay a maximum of 1 month's rent before the tenancy start date.
+TENANCY DEPOSIT: If the annual rent is below £50,000 the maximum deposit is up to 5 weeks' rent. If the annual rent is between £50,000 and £100,000 the maximum deposit is up to 6 weeks' rent. Your landlord has to keep your deposit money safe by protecting it in a government approved scheme.
+HOLDING DEPOSIT: The maximum holding deposit amount is equal to 1 week's rent. Your landlord can hold the deposit for 15 days, unless a different period is agreed in writing. If your landlord keeps the holding deposit they must tell you why in writing within 7 days.
+UTILITIES: Bills included must be listed as terms in your tenancy agreement and must reflect the actual costs. Your landlord cannot require a separate payment to them for council tax or a television licence.
+TENANCY CHANGES: You can be charged up to £50 for a change you request, or a higher amount if the work costs more.
+DEFAULT FEES: Default fees must be in the tenancy agreement; only replacement keys/security devices and late rent. Rent must be overdue at least 2 weeks before interest; maximum interest is 3% above the Bank of England base rate.
+PROHIBITED PAYMENTS: Your landlord is not allowed to make you pay for a loan, insurance, or a service contract as part of your tenancy. If asked for a fee that is not allowed, refuse and keep evidence; your local council can investigate, and the First-Tier Tribunal can order repayment.
+=== SOURCE 2: "Tenancy deposit protection" - GOV.UK ===
+Your landlord must put your deposit in a government-approved tenancy deposit scheme if you rent on an assured shorthold tenancy. In England and Wales: Deposit Protection Service, MyDeposits, or Tenancy Deposit Scheme. The deposit must be put in the scheme within 30 days of getting it, and returned within 10 days of agreeing the amount. A holding deposit does not have to be protected until you become a tenant.`;
+
+const esc = s => String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+function parseJSON(text){
+  let t = text.trim().replace(/^```(json)?/gi,"").replace(/```/g,"").trim();
+  try{ return JSON.parse(t); }catch(e){}
+  for(let s=t.indexOf("{"); s>=0; s=t.indexOf("{",s+1)){
+    let d=0,inS=false,ep=false;
+    for(let i=s;i<t.length;i++){ const c=t[i];
+      if(inS){ if(ep) ep=false; else if(c==="\\") ep=true; else if(c==='"') inS=false; }
+      else{ if(c==='"') inS=true; else if(c==="{") d++; else if(c==="}"){ d--; if(d===0){ try{ return JSON.parse(t.slice(s,i+1)); }catch(e){ break; } } } } }
+  }
+  throw new Error("The AI response was not valid JSON — press the button to try again.");
+}
+
+async function ask(prompt){
+  if(window.claude && window.claude.complete) return await window.claude.complete(prompt);
+  throw new Error("This Lite version runs inside claude.ai as an artifact (where AI access is free with your subscription). Paste this file's code into claude.ai and ask: 'Render this exactly as an interactive artifact.' For a standalone version with API keys, use the full FlatCheck instead.");
+}
+
+document.getElementById("go").onclick = async ()=>{
+  const listing = document.getElementById("listing").value.trim();
+  const criteria = document.getElementById("criteria").value.trim() || "not specified";
+  const err = document.getElementById("err"); err.style.display="none";
+  if(!listing){ err.textContent="Paste a listing first."; err.style.display="block"; return; }
+  const btn = document.getElementById("go"); btn.disabled=true;
+  document.getElementById("spin").style.display="flex";
+  const prompt = `You are a skeptical London rental advisor for someone relocating from Hong Kong who cannot view flats in person. Analyse the listing below. Rules: use ONLY information in the listing; never invent facts; absence of scam signals means "no signals detected in the text", never "safe"; never state exchange rates, live market prices, or legal rules (a separate grounded audit handles law). Keep every text field concise.
+
+Respond with ONE strict JSON object only, no markdown:
+{"fit_score":0,"score_reasoning":"2-3 sentences vs the user's criteria, penalising missing information",
+"red_flags":[{"flag":"","severity":"high|medium|low","evidence":"exact quote from listing"}],
+"scam":{"overall_risk":"high|medium|low","signals":[{"signal":"","status":"present|absent|unknown","quote":""}],"note":"one sentence"},
+"viewing_questions":["5 specific questions for this exact flat"],
+"move_in_costs":[{"item":"","estimate_gbp":"number or 'unknown'","basis":"what in the listing this is based on"}]}
+
+USER CRITERIA: ${criteria}
+
+LISTING:
+${listing}`;
+  try{
+    const j = parseJSON(await ask(prompt));
+    const col = j.fit_score>=7?"var(--good)":j.fit_score>=4?"var(--warn)":"var(--bad)";
+    document.getElementById("fit").innerHTML =
+      `<div class="score" style="color:${col}">${esc(j.fit_score)}<small>/10</small></div><div class="item">${esc(j.score_reasoning)}</div>`;
+    const rank={high:0,medium:1,low:2};
+    const flags=(j.red_flags||[]).sort((a,b)=>rank[a.severity]-rank[b.severity]);
+    document.getElementById("flags").innerHTML = flags.length?
+      flags.map(f=>`<div class="item"><span class="pill ${esc(f.severity)}">${esc(f.severity)}</span>${esc(f.flag)}<div class="q">${esc(f.evidence)}</div></div>`).join("")
+      : '<div class="item">No signals detected in the text provided.</div>';
+    const sc=j.scam||{};
+    document.getElementById("scam").innerHTML =
+      `<div class="item"><span class="pill ${esc(sc.overall_risk)}">overall: ${esc(sc.overall_risk)}</span>${esc(sc.note)}</div>`+
+      (sc.signals||[]).map(s=>`<div class="item"><span class="pill ${s.status==="present"?"high":s.status==="unknown"?"medium":"low"}">${esc(s.status)}</span>${esc(s.signal)}${s.quote?`<div class="q">"${esc(s.quote)}"</div>`:""}</div>`).join("");
+    document.getElementById("questions").innerHTML = (j.viewing_questions||[]).map((q,i)=>`<div class="item"><b>${i+1}.</b> ${esc(q)}</div>`).join("");
+    document.getElementById("costs").innerHTML = `<table><tr><th>Item</th><th>Estimate</th><th>Basis</th></tr>${(j.move_in_costs||[]).map(c=>`<tr><td>${esc(c.item)}</td><td>${c.estimate_gbp==="unknown"?"unknown":"£"+esc(c.estimate_gbp)}</td><td class="q">${esc(c.basis)}</td></tr>`).join("")}</table>`;
+    document.getElementById("results").style.display="block";
+  }catch(e){ err.textContent=e.message; err.style.display="block"; }
+  document.getElementById("spin").style.display="none"; btn.disabled=false;
+};
+
+document.getElementById("legalGo").onclick = async ()=>{
+  const listing = document.getElementById("listing").value.trim();
+  const err = document.getElementById("err"); err.style.display="none";
+  if(!listing){ err.textContent="Paste a listing and run the main check first."; err.style.display="block"; return; }
+  const btn = document.getElementById("legalGo"); btn.disabled=true;
+  document.getElementById("legalSpin").style.display="flex";
+  const prompt = `You are a fact-checker. You may ONLY use the SOURCE DOCUMENTS provided. Your own knowledge of the law is off-limits, even if you are confident it is correct.
+TASK: extract every claim or demand in the LISTING relating to fees, deposits, rent in advance, deposit protection, or charges. Verdict each: SUPPORTED (quote the exact source sentence), CONTRADICTED (quote and explain), PARTIALLY SUPPORTED (correct but missing a condition or threshold, e.g. the 5-week deposit cap applies only when annual rent is under £50,000), or NOT FOUND. No quote means NOT FOUND. Never guess. Also list important checks the listing is silent on.
+
+Respond with ONE strict JSON object only, no markdown:
+{"overall":"1-2 sentences","claims":[{"claim":"","verdict":"SUPPORTED|CONTRADICTED|PARTIALLY SUPPORTED|NOT FOUND","source_quote":"","explanation":""}],"silent_on":[""]}
+
+SOURCE DOCUMENTS:
+${SOURCE_DOCS}
+
+LISTING:
+${listing}`;
+  try{
+    const lg = parseJSON(await ask(prompt));
+    document.getElementById("legal").innerHTML =
+      `<div class="item">${esc(lg.overall)}</div>`+
+      ((lg.claims||[]).length? `<table><tr><th>Claim</th><th>Verdict</th><th>Source quote</th></tr>${(lg.claims||[]).map(c=>`<tr><td>${esc(c.claim)}</td><td><b>${esc(c.verdict)}</b><div class="q">${esc(c.explanation)}</div></td><td class="q">${esc(c.source_quote)||"—"}</td></tr>`).join("")}</table>` : '<div class="item">No fee or deposit claims found in the listing text.</div>')+
+      ((lg.silent_on||[]).length? `<div class="item"><b>Listing is silent on:</b> ${esc((lg.silent_on||[]).join("; "))}</div>` : "");
+  }catch(e){ err.textContent=e.message; err.style.display="block"; }
+  document.getElementById("legalSpin").style.display="none"; btn.disabled=false;
+};
+</script>
+</body>
+</html>
