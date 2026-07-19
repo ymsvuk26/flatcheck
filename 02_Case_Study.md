@@ -3,8 +3,7 @@
 
 **One-line summary:** I designed, built, and evaluated an LLM-powered web app that helps overseas renters assess London flat listings for fit, legality, scams, safety, and commute — and shipped mitigations for six real AI product failures encountered along the way: model deprecation (the Gemini 2.5 Flash retirement), output truncation, JSON reliability, geographic vendor blocking, free-tier congestion, and hallucinated live data.
 
-**Live demo:** 
-<a href="https://ymsvuk26.github.io/flatcheck/09_FlatCheck_Lite_app.html" target="_blank" rel="noopener">Try the live demo →</a>(only available through claude.ai)
+<a href="https://ymsvuk26.github.io/flatcheck/09_FlatCheck_Lite_app.html" target="_blank" rel="noopener">Try the live demo </a>(only available through claude.ai)
 **Built with:** AI-assisted development (Claude), Gemini/Claude/Llama APIs, gov.uk source documents, UK Police open data, TfL Journey Planner API
 
 ---
