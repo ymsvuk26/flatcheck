@@ -3,7 +3,8 @@
 
 **One-line summary:** I designed, built, and evaluated an LLM-powered web app that helps overseas renters assess London flat listings for fit, legality, scams, safety, and commute — and shipped mitigations for six real AI product failures encountered along the way: model deprecation (the Gemini 2.5 Flash retirement), output truncation, JSON reliability, geographic vendor blocking, free-tier congestion, and hallucinated live data.
 
-**Live demo:** https://ymsvuk26.github.io/flatcheck/09_FlatCheck_Lite_app.html 
+**Live demo:** 
+<a href="https://ymsvuk26.github.io/flatcheck/09_FlatCheck_Lite_app.html" target="_blank" rel="noopener">Try the live demo →</a>(only available through claude.ai)
 **Built with:** AI-assisted development (Claude), Gemini/Claude/Llama APIs, gov.uk source documents, UK Police open data, TfL Journey Planner API
 
 ---
@@ -12,7 +13,7 @@
 
 Renters relocating to London from abroad make four-figure financial decisions from thousands of miles away: they cannot view flats, don't know UK tenancy law, can't judge whether an area is safe, and are prime targets for rental scams. Existing listing platforms show properties; none of them assess risk for the person who cannot show up in person.
 
-I am the target user: a Hong Kong solicitor relocating to London in 2026. I built the tool I needed, which gave me a live feedback loop most side projects lack.
+I am the target user: a Hong Kong young professional relocating to London in 2026. I built the tool I needed, which gave me a live feedback loop most side projects lack.
 
 ## 2. What I built — version history
 
