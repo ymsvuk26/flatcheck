@@ -12,7 +12,7 @@
 
 Renters relocating to London from abroad make four-figure financial decisions from thousands of miles away: they cannot view flats, don't know UK tenancy law, can't judge whether an area is safe, and are prime targets for rental scams. Existing listing platforms show properties; none of them assess risk for the person who cannot show up in person.
 
-I am the target user: a Hong Kong young professional relocating to London in 2026. I built the tool I needed, which gave me a live feedback loop most side projects lack.
+I am the target user: a Hong Kong young professional relocating to London next year. I built the tool I needed, which gave me a live feedback loop most side projects lack.
 
 ## 2. What I built — version history
 
